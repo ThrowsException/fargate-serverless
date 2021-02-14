@@ -8,11 +8,6 @@ provider:
 
 resources:
   Resources:
-    ecr:
-      Type: AWS::ECR::Repository
-      Properties: 
-        ImageTagMutability: MUTABLE
-        RepositoryName: "node-fargate"
     ExecutionRole:
       Type: AWS::IAM::Role
       Properties:
@@ -68,28 +63,9 @@ resources:
         VpcId: vpc-fc8d1f87
         SecurityGroupIngress:
           - IpProtocol: tcp
-            FromPort: 3000
+            FromPort: 80
             ToPort: 3000
             CidrIp: 0.0.0.0/0
-    service:
-      Type: AWS::ECS::Service
-      Properties:
-        Cluster: default
-        DesiredCount: 1
-        TaskDefinition: !Ref ecs
-        LaunchType: FARGATE
-        NetworkConfiguration:
-          AwsvpcConfiguration:
-            AssignPublicIp: ENABLED
-            Subnets:
-              - subnet-824b55e6
-              - subnet-88595ca7
-            SecurityGroups:
-            - !Ref ContainerSecurityGroup
-        LoadBalancers:
-          - ContainerName: app
-            ContainerPort: 3000
-            TargetGroupArn: !Ref TargetGroup
     LoadBalancer:
       Type: AWS::ElasticLoadBalancingV2::LoadBalancer
       Properties:
@@ -107,7 +83,7 @@ resources:
           - TargetGroupArn: !Ref TargetGroup
             Type: forward
         LoadBalancerArn: !Ref LoadBalancer
-        Port: 3000
+        Port: 80
         Protocol: HTTP
     TargetGroup:
       Type: AWS::ElasticLoadBalancingV2::TargetGroup
@@ -116,3 +92,24 @@ resources:
         Protocol: HTTP
         TargetType: ip
         VpcId: vpc-fc8d1f87
+    service:
+      Type: AWS::ECS::Service
+      DependsOn:
+      - Listener
+      Properties:
+        Cluster: default
+        DesiredCount: 1
+        TaskDefinition: !Ref ecs
+        LaunchType: FARGATE
+        NetworkConfiguration:
+          AwsvpcConfiguration:
+            AssignPublicIp: ENABLED
+            Subnets:
+              - subnet-824b55e6
+              - subnet-88595ca7
+            SecurityGroups:
+            - !Ref ContainerSecurityGroup
+        LoadBalancers:
+          - ContainerName: app
+            ContainerPort: 3000
+            TargetGroupArn: !Ref TargetGroup
